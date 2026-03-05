@@ -1,0 +1,149 @@
+Standard Library: Collections & I/O for AI Agents
+-----------------------------------------------------
+Collections:
+   Efficient, type-safe data structures:
+
+   .. code-block:: crystal
+
+      # Arrays - dynamic, growable collections
+      numbers = [1, 2, 3, 4, 5]
+      numbers << 6                    # Add element
+      numbers.map(&.* 2)              # [2, 4, 6, 8, 10, 12]
+      numbers.select(&.even?)           # [2, 4, 6]
+      numbers.reduce(0) { |acc, n| acc + n }  # 21
+
+      # Hashes - key-value mappings
+      config = {
+        "host"     => "localhost",
+        "port"     => 5432,
+        "database"  => "myapp",
+        "ssl"       => true,
+      }
+
+      config["host"]?                 # "localhost" (safe access)
+      config.fetch("timeout", 30)      # 30 (default value)
+      config.transform_keys(&.upcase)   # {"HOST" => "localhost", ...}
+
+      # Tuples - fixed-size, typed collections
+      point = {10, 20}               # Tuple(Int32, Int32)
+      point[0]                        # 10
+      point[1]                        # 20
+
+      # Named Tuples - self-documenting
+      user = {
+        id:    1,
+        name:  "Alice",
+        email: "alice@example.com",
+      }  # NamedTuple(id: Int32, name: String, email: String)
+
+      user[:name]                     # "Alice"
+      user[:email]?                    # "alice@example.com"
+
+String Manipulation:
+   Powerful string processing with Unicode support:
+
+   .. code-block:: crystal
+
+      text = "Hello, Crystal World!"
+
+      # Basic operations
+      text.upcase                      # "HELLO, CRYSTAL WORLD!"
+      text.downcase                    # "hello, crystal world!"
+      text.capitalize                  # "Hello, crystal world!"
+      text.titleize                    # "Hello, Crystal World!"
+
+      # Splitting and joining
+      words = text.split               # ["Hello,", "Crystal", "World!"]
+      words.join("-")                  # "Hello,-Crystal,-World!"
+
+      # Substitution
+      text.gsub("Crystal", "Ruby")     # "Hello, Ruby World!"
+      text.sub(/World/, "Universe")    # "Hello, Crystal Universe!"
+
+      # Formatting
+      "%s has %d items".format("Cart", 5)  # "Cart has 5 items"
+      "Number: %0.2f".format(3.14159)       # "Number: 3.14"
+
+File I/O:
+   Simple, type-safe file operations:
+
+   .. code-block:: crystal
+
+      # Reading files
+      content = File.read("config.json")           # String
+      lines = File.read_lines("data.txt")          # Array(String)
+      bytes = File.read_bytes("image.bin")         # Bytes
+
+      # Writing files
+      File.write("output.txt", "Hello, World!")
+      File.write_lines("data.csv", ["name,age", "Alice,30"])
+
+      # File operations
+      File.exists?("config.yml")                   # Bool
+      File.size("large_file.txt")                  # Int64
+      File.rename("old.txt", "new.txt")            # Nil
+
+      # Directory operations
+      Dir.mkdir("logs") unless Dir.exists?("logs")
+      Dir.entries(".")                             # Array(String)
+      Dir.glob("*.cr")                            # Array(String)
+
+JSON Processing:
+   Built-in JSON serialization:
+
+   .. code-block:: crystal
+
+      # JSON parsing
+      json_string = %({"name": "Alice", "age": 30, "active": true})
+      data = JSON.parse(json_string)                 # JSON::Any
+
+      data["name"].as_s              # "Alice"
+      data["age"].as_i               # 30
+      data["active"].as_bool          # true
+
+      # Type-safe parsing
+      struct User
+        include JSON::Serializable
+
+        property name : String
+        property age : Int32
+        property active : Bool
+      end
+
+      user = User.from_json(json_string)
+      user.name                           # "Alice"
+      user.age                            # 30
+
+      # Serialization
+      user.to_json                       # {"name":"Alice","age":30,"active":true}
+
+HTTP Client:
+   Simple HTTP requests with proper error handling:
+
+   .. code-block:: crystal
+
+      require "http/client"
+
+      # GET request
+      response = HTTP::Client.get("https://api.example.com/users")
+      response.status_code                  # 200
+      response.body                        # JSON string
+      response.success?                    # true
+
+      # POST request with JSON
+      client = HTTP::Client.new("https://api.example.com")
+      headers = HTTP::Headers{"Content-Type" => "application/json"}
+      body = %({"name": "Bob", "email": "bob@example.com"})
+
+      response = client.post("/users", headers, body)
+
+      # Error handling
+      begin
+        response = HTTP::Client.get("https://example.com")
+        puts response.body
+      rescue ex : Socket::Addrinfo::Error
+        puts "Network error: #{ex.message}"
+      rescue ex : URI::Error
+        puts "Invalid URL: #{ex.message}"
+      end
+

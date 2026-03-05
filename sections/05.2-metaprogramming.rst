@@ -1,0 +1,608 @@
+Metaprogramming: Macros & Annotations for AI Agents
+---------------------------------------------------
+**Macros** run at compile time and operate on Abstract Syntax Tree (AST) nodes. They eliminate boilerplate and create DSLs.
+
+.. code-block:: crystal
+
+   # Generate methods dynamically
+   macro define_getter(*names)
+       {% for name in names %}
+         def {{name}}
+           @{{name}}
+         end
+        {% end %}
+      end
+
+
+      class Person
+      define_getter name, age, email
+   end
+
+Macro Patterns:
+   * ``{{...}}`` - interpolate AST nodes
+
+   * ``{% if condition %}`` - conditional generation
+
+   * ``{% for item in collection %}`` - iteration
+
+   * ``@type`` - access type information
+
+   .. code-block:: crystal
+
+      macro create_property(name, type)
+        property {{name}} : {{type}}
+      end
+
+      macro debug_mode
+        {% if flag?(:debug) %}
+          puts "Debug mode enabled"
+        {% else %}
+          puts "Production mode"
+        {% end %}
+      end
+
+      macro generate_accessors(*names)
+        {% for name in names %}
+          def {{name.id}}
+            @{{name.id}}
+          end
+
+          def {{name.id}}=(value)
+            @{{name.id}} = value
+          end
+        {% end %}
+      end
+
+Advanced Techniques:
+   * ``*args`` - variadic arguments
+
+   * ``@type.instance_vars`` - introspection
+
+   * ``previous_def`` - call overridden method
+
+   .. code-block:: crystal
+
+      macro delegate(to, *methods)
+        {% for method in methods %}
+          def {{method.id}}(*args, **options)
+            {{to.id}}.{{method.id}}(*args, **options)
+          end
+        {% end %}
+      end
+
+      macro trace_method(name)
+        def {{name.id}}
+          puts "Calling {{name.id}}"
+          result = previous_def
+          puts "Finished {{name.id}}"
+          result
+        end
+      end
+
+Macro Fundamentals
+~~~~~~~~~~~~~~~~~~
+Macro Interpolation:
+   Use `{{...}}` to interpolate AST nodes and expressions:
+
+   .. code-block:: crystal
+
+      macro define_method(name, content)
+        def {{name.id}}
+          {{content}}
+        end
+      end
+
+      define_method foo, 1  # Generates: def foo; 1; end
+
+      macro create_property(name, type)
+        property {{name}} : {{type}}
+      end
+
+      class User
+        create_property email, String
+        create_property age, Int32
+      end
+
+Macro Conditionals:
+   Use `{% if condition %}` for conditional code generation:
+
+   .. code-block:: crystal
+
+      macro define_method(name, content)
+        def {{name.id}}
+          {% if content == 1 %}
+            "one"
+          {% elsif content == 2 %}
+            "two"
+          {% else %}
+            {{content}}
+          {% end %}
+        end
+      end
+
+      macro debug_mode
+        {% if flag?(:debug) %}
+          puts "Debug mode enabled"
+        {% else %}
+          puts "Production mode"
+        {% end %}
+      end
+
+Macro Iteration:
+   Iterate over arrays and ranges:
+
+   .. code-block:: crystal
+
+      macro define_constants(count)
+        {% for i in (1..count) %}
+          PI_{{i.id}} = Math::PI * {{i}}
+        {% end %}
+      end
+
+      define_constants(3)  # Creates PI_1, PI_2, PI_3
+
+      macro generate_accessors(*names)
+        {% for name in names %}
+          def {{name.id}}
+            @{{name.id}}
+          end
+
+          def {{name.id}}=(value)
+            @{{name.id}} = value
+          end
+        {% end %}
+      end
+
+Advanced Macro Techniques
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Variadic Arguments:
+   Use `*` for variable number of arguments:
+
+   .. code-block:: crystal
+
+      macro define_dummy_methods(*names)
+        {% for name, index in names %}
+          def {{name.id}}
+            {{index}}
+          end
+        {% end %}
+      end
+
+      define_dummy_methods foo, bar, baz
+
+      macro delegate(to, *methods)
+        {% for method in methods %}
+          def {{method.id}}(*args, **options)
+            {{to.id}}.{{method.id}}(*args, **options)
+          end
+        {% end %}
+      end
+
+Type Information & Introspection:
+   Access type information with `@type` and other special variables:
+
+   .. code-block:: crystal
+
+      macro add_describe_methods
+        def describe
+          "Class is: " + {{ @type.stringify }}
+        end
+
+        def type_name
+          {{ @type.name.stringify }}
+        end
+      end
+
+      macro check_instance_vars
+        {% for ivar in @type.instance_vars %}
+          puts "{{ivar}}: {{ivar.type}}"
+        {% end %}
+      end
+
+AST Manipulation:
+   Direct manipulation of AST nodes:
+
+   .. code-block:: crystal
+
+      macro trace_method(name)
+        def {{name.id}}
+          puts "Calling {{name.id}}"
+          result = previous_def
+          puts "Finished {{name.id}}"
+          result
+        end
+      end
+
+      macro log_call(method_name, *args)
+        puts "Calling {{method_name.id}} with: {{args}}"
+        {{method_name.id}}({{args}})
+      end
+
+Constant and Variable Generation:
+   Generate constants and variables dynamically:
+
+   .. code-block:: crystal
+
+      macro enum_values(*values)
+        {% for value in values %}
+          {{value.upcase}} = {{value.stringify}}
+        {% end %}
+      end
+
+      macro create_counter(name)
+        @@{{name}}_counter = 0
+
+        def self.{{name}}_count
+          @@{{name}}_counter
+        end
+
+        private def increment_{{name}}_counter
+          @@{{name}}_counter += 1
+        end
+      end
+
+Module and Class Generation:
+   Generate entire types and modules:
+
+   .. code-block:: crystal
+
+      macro define_class(module_name, class_name, method, content)
+        module {{module_name}}
+          class {{class_name}}
+            def initialize(@name : String)
+            end
+
+            def {{method}}
+              {{content}} + @name
+            end
+          end
+        end
+      end
+
+      define_class MyApp, User, greet, "Hello "
+
+      macro create_service(name, *dependencies)
+        class {{name}}Service
+          {% for dep in dependencies %}
+            @{{dep.id}} : {{dep.id}}Service
+          {% end %}
+
+          def initialize({% for dep in dependencies %}@{{dep.id}} : {{dep.id}}Service{% if !dep.last? %}, {% end %}{% end %})
+          end
+        end
+      end
+
+Advanced Macro Patterns:
+   Sophisticated metaprogramming techniques:
+
+   .. code-block:: crystal
+
+      # DSL creation
+      macro create_dsl(&block)
+        class DSL
+          def initialize
+            @config = {} of String => String
+          end
+
+          def method_missing(name : Symbol, args, &block)
+            if block
+              @config[name.to_s] = block.call.to_s
+            else
+              @config[name.to_s] = args.first?.to_s
+            end
+            self
+          end
+
+          def to_h
+            @config
+          end
+        end
+
+        dsl = DSL.new
+        dsl.instance_eval(&block)
+        dsl.to_h
+      end
+
+      # Usage
+      config = create_dsl do
+        database "postgres://localhost/myapp"
+        port 5432
+        debug_mode do
+          log_level "debug"
+          enable_metrics true
+        end
+      end
+
+      # Event system generation
+      macro define_event_system(*events)
+        {% for event in events %}
+          class {{event.id}}Event
+            include JSON::Serializable
+
+            def initialize(@data : String)
+            end
+          end
+
+          class {{event.id}}Handler
+            def handle(event : {{event.id}}Event)
+              # Default implementation
+            end
+          end
+        {% end %}
+
+        module EventBus
+          @@handlers = {} of String => Array(->)
+
+          def self.subscribe(event_type : T.class, &handler : T ->) forall T
+            key = T.name
+            @@handlers[key] ||= [] of ->
+            @@handlers[key] << handler
+          end
+
+          def self.publish(event : T) forall T
+            key = T.name
+            if handlers = @@handlers[key]?
+              handlers.each(&.call(event))
+            end
+          end
+        end
+      end
+
+      define_event_system UserCreated, OrderPlaced, PaymentProcessed
+
+      # Type-safe builder pattern
+      macro create_builder(base_class)
+        class {{base_class}}Builder
+          def initialize
+            @{{base_class.stringify.downcase.id}} = {{base_class}}.new
+          end
+
+          {% for ivar in base_class.resolve.instance_vars %}
+            def {{ivar.name}}({{ivar.name}} : {{ivar.type}})
+              @{{base_class.stringify.downcase.id}}.{{ivar.name}} = {{ivar.name}}
+              self
+            end
+          {% end %}
+
+          def build : {{base_class}}
+            @{{base_class.stringify.downcase.id}}
+          end
+        end
+      end
+
+      class User
+        property name : String
+        property email : String
+        property age : Int32
+      end
+
+      create_builder User
+
+      user = UserBuilder.new
+        .name("John")
+        .email("john@example.com")
+        .age(30)
+        .build
+
+Annotations
+~~~~~~~~~~~
+**Annotations** are metadata attached to types, methods, or variables. They are accessible at compile time via macros.
+
+.. code-block:: crystal
+
+   # Frameworks use annotations like this
+   @[MyFramework::Route(path: "/users", method: "GET")]
+   def users_index(context)
+       # ...
+   end
+
+   # Database mapping
+   @[DB::Field(primary_key: true)]
+   property id : Int32
+
+   @[DB::Field(unique: true)]
+   property email : String
+
+Annotation Processing:
+   Read and process annotations in macros:
+
+   .. code-block:: crystal
+
+      macro process_annotations
+        {% for method in @type.methods %}
+          {% for ann in method.annotations %}
+            {% if ann == MyFramework::Route %}
+              register_route({{method.name}}, {{ann[:path]}}, {{ann[:method]}})
+            {% end %}
+          {% end %}
+        {% end %}
+      end
+
+      macro validate_required_fields
+        {% for ivar in @type.instance_vars %}
+          {% if ivar.has_annotation?(Required) %}
+            unless @{{ivar.id}}
+              raise "{{ivar.id}} is required"
+            end
+          {% end %}
+        {% end %}
+      end
+
+Custom Annotations:
+   Define and use custom annotations:
+
+   .. code-block:: crystal
+
+      annotation Deprecated
+      end
+
+      annotation Experimental
+      end
+
+      @[Deprecated("Use new_method instead")]
+      def old_method
+        "old implementation"
+      end
+
+      @[Experimental]
+      def new_feature
+        "experimental feature"
+      end
+
+Annotation with Arguments:
+   Pass arguments to annotations:
+
+   .. code-block:: crystal
+
+      annotation Route
+        def initialize(@path : String, @method : String = "GET")
+        end
+      end
+
+      annotation Validate
+        def initialize(@rules : Array(String))
+        end
+      end
+
+      @[Route("/api/users", "POST")]
+      @[Validate(["email_required", "password_min_length"])]
+      def create_user
+        # implementation
+      end
+
+Macro Hooks:
+   Use macro hooks for automatic processing:
+
+   .. code-block:: crystal
+
+      macro included
+        {% if @type.annotation?(AutoJSON) %}
+          # Generate JSON methods automatically
+          def to_json(json : JSON::Builder)
+            {% for ivar in @type.instance_vars %}
+              json.field({{ivar.id.stringify}}, @{{ivar.id}})
+            {% end %}
+          end
+        {% end %}
+      end
+
+      macro inherited
+        puts "Class {{@type.name}} inherits from {{@type.superclass}}"
+      end
+
+      macro finished
+        puts "Finished compiling {{@type.name}}"
+      end
+
+Real-World Macro Patterns
+~~~~~~~~~~~~~~~~~~~~~~~~~
+DSL Generation:
+   Create domain-specific languages:
+
+   .. code-block:: crystal
+
+      macro define_dsl_method(name, type)
+        def {{name.id}}(value : {{type.id}})
+          @config[{{name.id.stringify}}] = value
+        end
+
+        def {{name.id}}
+          @config[{{name.id.stringify}}]?.as({{type.id}}?)
+        end
+      end
+
+      class Configuration
+        def initialize
+          @config = {} of String => String | Int32 | Bool
+        end
+
+        define_dsl_method host, String
+        define_dsl_method port, Int32
+        define_dsl_method debug, Bool
+      end
+
+Validation Macros:
+   Generate validation logic:
+
+   .. code-block:: crystal
+
+      macro validates_presence_of(*fields)
+        {% for field in fields %}
+          def validate_{{field.id}}_presence
+            if @{{field.id}}.nil? || @{{field.id}}.to_s.empty?
+              errors.add({{field.id.stringify}}, "can't be blank")
+            end
+          end
+        {% end %}
+      end
+
+      macro validates_length_of(field, min = nil, max = nil)
+        def validate_{{field.id}}_length
+          value = @{{field.id}}.to_s
+          {% if min %}
+            if value.size < {{min}}
+              errors.add({{field.id.stringify}}, "too short (minimum is {{min}} characters)")
+            end
+          {% end %}
+          {% if max %}
+            if value.size > {{max}}
+              errors.add({{field.id.stringify}}, "too long (maximum is {{max}} characters)")
+            end
+          {% end %}
+        end
+      end
+
+Serialization Macros:
+   Generate serialization methods:
+
+   .. code-block:: crystal
+
+      macro json_fields(*fields)
+        def to_json(json : JSON::Builder)
+          json.object do
+            {% for field in fields %}
+              json.field({{field.id.stringify}}, @{{field.id}})
+            {% end %}
+          end
+        end
+
+        def self.from_json(json : JSON::PullParser)
+          instance = new
+          json.on_key! do |key|
+            {% for field in fields %}
+              if key == {{field.id.stringify}}
+                instance.@{{field.id}} = {{field.type}}.new(json)
+              end
+            {% end %}
+          end
+          instance
+        end
+      end
+
+Testing Macros
+~~~~~~~~~~~~~~
+Generate test methods:
+
+   .. code-block:: crystal
+
+     macro test(description, &block)
+       test_{{description.gsub(/\s+/, "_").id}} do
+         {{block.body}}
+       end
+     end
+
+     macro should(description, &block)
+       it "should {{description}}" do
+         {{block.body}}
+       end
+     end
+
+     test "adds two numbers" do
+       result = 2 + 3
+       result.should eq(5)
+     end
+
+     should "return zero for empty array" do
+       [].size.should eq(0)
+     end
+

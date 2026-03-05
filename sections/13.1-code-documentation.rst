@@ -1,0 +1,244 @@
+Documentation Best Practices: Code & Types for AI Agents
+--------------------------------------------------------
+Code Documentation:
+   Clear, comprehensive API documentation:
+
+   .. code-block:: crystal
+
+      # User authentication and authorization service.
+      #
+      # This service handles user registration, login, and permission management.
+      # It uses bcrypt for password hashing and JWT tokens for session management.
+      #
+      # ## Example
+      #
+      # ```
+      # service = AuthService.new(database_connection)
+      # token = service.register("alice@example.com", "password123")
+      # user = service.authenticate(token)
+      # ```
+      #
+      # ## Security Notes
+      #
+      # * Passwords are hashed using bcrypt with a cost factor of 12
+      # * JWT tokens expire after 24 hours
+      # * Rate limiting is applied to prevent brute force attacks
+      class AuthService
+        # Register a new user with email and password.
+        #
+        # *email* - User's email address (must be valid format)
+        # *password* - User's password (minimum 8 characters)
+        #
+        # Returns JWT token on successful registration
+        #
+        # Raises `ValidationError` if email is invalid or password too short
+        # Raises `DuplicateUserError` if email already exists
+        #
+        # ## Examples
+        #
+        # ```
+        # service = AuthService.new(db)
+        # token = service.register("user@example.com", "securepassword")
+        # puts token  # => "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        # ```
+        def register(email : String, password : String) : String
+          validate_email(email)
+          validate_password(password)
+
+          hashed_password = BCrypt::Password.create(password, cost: 12)
+          user = create_user(email, hashed_password)
+          generate_jwt_token(user)
+        end
+
+        # Authenticate user with JWT token.
+        #
+        # *token* - JWT token from previous authentication
+        #
+        # Returns authenticated user or `nil` if token is invalid
+        #
+        # ## Examples
+        #
+        # ```
+        # user = service.authenticate("valid.jwt.token")
+        # user.email  # => "user@example.com"
+        #
+        # user = service.authenticate("invalid.token")
+        # user  # => nil
+        # ```
+        def authenticate(token : String) : User?
+          payload = decode_jwt_token(token)
+          return nil unless payload
+
+          user_id = payload["user_id"].as_i
+          find_user(user_id)
+        rescue JWT::Error
+          nil
+        end
+      end
+
+Type Documentation:
+   Document complex types and unions:
+
+   .. code-block:: crystal
+
+      # Result type for operations that can fail.
+      #
+      # This type provides a type-safe way to handle operations that might
+      # succeed or fail without using exceptions.
+      #
+      # ## Type Parameters
+      #
+      # *T* - Success value type
+      # *E* - Error type
+      #
+      # ## Examples
+      #
+      # ```
+      # # Success case
+      # result = Result(Int32, String).success(42)
+      # result.success?  # => true
+      # result.value     # => 42
+      #
+      # # Error case
+      # result = Result(Int32, String).error("Invalid input")
+      # result.success?  # => false
+      # result.error     # => "Invalid input"
+      # ```
+      class Result(T, E)
+        # Creates a successful result.
+        #
+        # *value* - The success value
+        #
+        # Returns `Result` with success state
+        def self.success(value : T) : self
+          new(true, value, nil)
+        end
+
+        # Creates an error result.
+        #
+        # *error* - The error value
+        #
+        # Returns `Result` with error state
+        def self.error(error : E) : self
+          new(false, nil, error)
+        end
+
+        # Returns `true` if the result is successful.
+        #
+        # ## Examples
+        #
+        # ```
+        # Result.success(42).success?  # => true
+        # Result.error("fail").success? # => false
+        # ```
+        def success? : Bool
+          @success
+        end
+
+        # Returns the success value.
+        #
+        # Raises `NilAssertionError` if result is an error
+        #
+        # ## Examples
+        #
+        # ```
+        # Result.success(42).value  # => 42
+        # Result.error("fail").value # raises NilAssertionError
+        # ```
+        def value : T
+          @value.not_nil!
+        end
+
+        # Returns the error value.
+        #
+        # Raises `NilAssertionError` if result is successful
+        #
+        # ## Examples
+        #
+        # ```
+        # Result.success(42).error  # raises NilAssertionError
+        # Result.error("fail").error # => "fail"
+        # ```
+        def error : E
+          @error.not_nil!
+        end
+      end
+
+Module Documentation:
+   Document module functionality and usage:
+
+   .. code-block:: crystal
+
+      # String manipulation utilities for AI agents.
+      #
+      # This module provides common string operations optimized for
+      # text processing and data cleaning tasks.
+      #
+      # ## Features
+      #
+      # * Safe string operations with nil handling
+      # * Unicode-aware text processing
+      # * Performance-optimized implementations
+      #
+      # ## Example
+      #
+      # ```
+      # require "./string_utils"
+      #
+      # text = "  Hello, World!  "
+      # cleaned = StringUtils.clean(text)
+      # cleaned  # => "Hello, World!"
+      #
+      # words = StringUtils.extract_words(text)
+      # words    # => ["Hello", "World"]
+      # ```
+      module StringUtils
+        # Safely cleans and normalizes text.
+        #
+        # *text* - Input string (can be `nil`)
+        #
+        # Returns cleaned string or empty string if input is `nil`
+        #
+        # ## Operations
+        #
+        # * Removes leading/trailing whitespace
+        # * Normalizes multiple spaces to single space
+        # * Removes control characters
+        # * Preserves Unicode characters
+        #
+        # ## Examples
+        #
+        # ```
+        # StringUtils.clean(nil)           # => ""
+        # StringUtils.clean("  hello  ")   # => "hello"
+        # StringUtils.clean("hello\nworld")  # => "hello world"
+        # ```
+        def self.clean(text : String?) : String
+          return "" unless text
+
+          text
+            .strip
+            .gsub(/\s+/, " ")
+            .gsub(/[\x00-\x1F\x7F]/, "")
+        end
+
+        # Extracts words from text.
+        #
+        # *text* - Input string
+        #
+        # Returns array of words (letters and numbers only)
+        #
+        # ## Examples
+        #
+        # ```
+        # StringUtils.extract_words("Hello, world! 123")
+        # # => ["Hello", "world", "123"]
+        # ```
+        def self.extract_words(text : String) : Array(String)
+          text
+            .downcase
+            .scan(/[a-z0-9]+/)
+            .map(&.[0])
+        end
+      end
+

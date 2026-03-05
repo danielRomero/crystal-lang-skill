@@ -1,0 +1,275 @@
+Standard Library: Utilities for AI Agents
+---------------------------------------------
+Time and Date:
+   Comprehensive date/time handling:
+
+   .. code-block:: crystal
+
+      # Current time
+      now = Time.local                    # Time
+      utc = Time.utc                      # Time
+
+      # Creating specific times
+      birthday = Time.local(1990, 5, 15, 14, 30, 0)
+      meeting = Time.parse("2024-01-15 10:00", "%F %T", Time::Location.local)
+
+      # Formatting
+      now.to_s("%Y-%m-%d %H:%M:%S")        # "2024-01-15 10:30:45"
+      now.to_rfc3339                        # "2024-01-15T10:30:45Z"
+
+      # Time arithmetic
+      tomorrow = now + 1.day
+      last_week = now - 7.days
+      in_2_hours = now + 2.hours
+
+      # Comparison
+      now > tomorrow?                       # false
+      birthday < now?                        # true
+
+Logging:
+   Built-in logging with multiple levels:
+
+   .. code-block:: crystal
+
+      require "log"
+
+      # Basic logging
+      Log.info { "Application started" }
+      Log.debug { "Processing request #{request_id}" }
+      Log.warn { "Rate limit approaching" }
+      Log.error { "Database connection failed" }
+
+      # Structured logging
+      Log.context.set(user_id: user.id, request_id: request.id)
+      Log.info { "User action completed" }
+
+      # Custom log configuration
+      Log.setup(
+        level: Log::Severity::Debug,
+        backend: Log::IOBackend.new(File.new("app.log", "a"))
+      )
+
+YAML Processing:
+   Human-readable configuration and data serialization:
+
+   .. code-block:: crystal
+
+      require "yaml"
+
+      # YAML parsing
+      yaml_string = %(
+        name: "John Doe"
+        age: 30
+        hobbies:
+          - reading
+          - coding
+          - gaming
+        address:
+          street: "123 Main St"
+          city: "Anytown"
+      )
+
+      data = YAML.parse(yaml_string)  # YAML::Any
+      data["name"].as_s               # "John Doe"
+      data["hobbies"].as_a            # ["reading", "coding", "gaming"]
+
+      # Type-safe parsing
+      struct Person
+        include YAML::Serializable
+
+        property name : String
+        property age : Int32
+        property hobbies : Array(String)
+      end
+
+      person = Person.from_yaml(yaml_string)
+      person.hobbies                  # ["reading", "coding", "gaming"]
+
+      # YAML serialization
+      person.to_yaml                  # name: John Doe\nage: 30\n...
+
+URI Handling:
+   URL parsing and manipulation:
+
+   .. code-block:: crystal
+
+      require "uri"
+
+      # URI parsing
+      uri = URI.parse("https://user:pass@example.com:8080/path?query=value#fragment")
+      uri.scheme                      # "https"
+      uri.host                        # "example.com"
+      uri.port                        # 8080
+      uri.path                        # "/path"
+      uri.query                       # "query=value"
+      uri.user                        # "user"
+      uri.password                    # "pass"
+      uri.fragment                    # "fragment"
+
+      # URI building
+      uri = URI.new(
+        scheme: "https",
+        host: "api.example.com",
+        port: 443,
+        path: "/v1/users",
+        query: "limit=10&offset=0"
+      )
+
+      uri.to_s                        # "https://api.example.com/v1/users?limit=10&offset=0"
+
+      # URL encoding/decoding
+      URI.encode("hello world")       # "hello%20world"
+      URI.decode("hello%20world")     # "hello world"
+
+Path Operations:
+   Cross-platform file path manipulation:
+
+   .. code-block:: crystal
+
+      require "path"
+
+      # Path operations
+      path = Path["/home/user/documents/file.txt"]
+      path.parent                     # Path["/home/user/documents"]
+      path.name                       # "file.txt"
+      path.extension                  # "txt"
+      path.stem                       # "file"
+
+      # Path building
+      home = Path.home                # Current user's home directory
+      config_path = home / "config" / "app.yml"
+      config_path.to_s                # "/home/user/config/app.yml"
+
+      # Path normalization
+      messy = Path["./foo/../bar/./baz"]
+      messy.normalize                 # Path["bar/baz"]
+
+      # Glob patterns
+      Dir.glob("**/*.cr")             # All .cr files recursively
+      Dir.glob("src/**/*.cr")         # .cr files in src/ directory
+
+System Information:
+   Environment and system utilities:
+
+   .. code-block:: crystal
+
+      # Environment variables
+      ENV["HOME"]?                    # "/home/user" or nil
+      ENV["PATH"]?.try(&.split(":"))  # Array of paths
+
+      # System information
+      System.cpu_count                # Number of CPU cores
+      System.hostname                 # System hostname
+
+      # Process information
+      Process.pid                     # Current process ID
+      Process.executable_path         # Path to current executable
+
+      # Memory usage
+      Process.rss                     # Resident Set Size in bytes
+
+Random Number Generation:
+   Cryptographically secure random numbers:
+
+   .. code-block:: crystal
+
+      require "random"
+
+      # Random numbers
+      Random.rand                     # Float64 between 0.0 and 1.0
+      Random.rand(100)                # Int32 between 0 and 99
+      Random.rand(1..100)             # Int32 between 1 and 100
+
+      # Random bytes
+      Random::Secure.random_bytes(16) # 16 random bytes
+
+      # Random strings
+      Random::Secure.hex(32)          # 32 character hex string
+      Random::Secure.base64(32)       # 32 character base64 string
+
+Base64 Encoding:
+   Binary data encoding:
+
+   .. code-block:: crystal
+
+      require "base64"
+
+      # Encoding
+      data = "Hello, World!"
+      encoded = Base64.encode(data)   # "SGVsbG8sIFdvcmxkIQ=="
+      strict = Base64.strict_encode(data)  # "SGVsbG8sIFdvcmxkIQ"
+
+      # Decoding
+      Base64.decode(encoded)          # "Hello, World!"
+      Base64.decode_string(encoded)   # "Hello, World!"
+
+      # URL-safe encoding
+      Base64.urlsafe_encode("user:pass")  # "dXNlcjpwYXNz"
+
+Cryptography:
+   Hash functions and encryption:
+
+   .. code-block:: crystal
+
+      require "digest"
+
+      # Hash functions
+      Digest::MD5.hexdigest("hello")  # "5d41402abc4b2a76b9719d911017c592"
+      Digest::SHA1.hexdigest("hello") # "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+      Digest::SHA256.hexdigest("hello") # "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+      # HMAC
+      require "openssl"
+      key = "secret"
+      data = "message"
+      hmac = OpenSSL::HMAC.hexdigest(:sha256, key, data)
+
+Regular Expressions:
+   Advanced pattern matching:
+
+   .. code-block:: crystal
+
+      # Regex literals
+      email_pattern = /(\w+)@(\w+\.\w+)/
+      phone_pattern = /(\d{3})-(\d{3})-(\d{4})/
+
+      # Matching
+      if match = email_pattern.match("user@example.com")
+        match[1]                      # "user"
+        match[2]                      # "example.com"
+        match.captures                # ["user", "example.com"]
+      end
+
+      # Substitution
+      text = "Hello, 123-456-7890!"
+      text.gsub(phone_pattern, "\\1-\\2-XXXX")  # "Hello, 123-456-XXXX!"
+
+      # Validation
+      def valid_email?(email : String) : Bool
+        email =~ /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+      end
+
+Process Management:
+   Running external commands:
+
+   .. code-block:: crystal
+
+      # Simple command execution
+      output = `ls -la`               # Run ls -la and capture output
+      status = $?.success?            # Check exit status
+
+      # Process execution with options
+      process = Process.new("grep", ["-r", "pattern", "src/"], output: :inherit)
+      process.wait                    # Wait for completion
+      process.exit_status             # Exit code
+
+      # Background processes
+      Process.fork do
+        # Child process code
+        sleep 1
+        puts "Child process done"
+      end
+
+      # Parent continues immediately
+      puts "Parent process continuing"
+

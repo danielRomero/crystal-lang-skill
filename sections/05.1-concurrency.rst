@@ -1,0 +1,232 @@
+Concurrency for AI Agents
+-------------------------
+Crystal's concurrency uses lightweight **fibers** (spawned via `spawn`) and **channels** for communication. Do not share memory between fibers; communicate via channels.
+
+.. code-block:: crystal
+
+   ch1 = Channel(Int32).new
+   ch2 = Channel(String).new
+
+   spawn do
+       sleep 1.second
+       ch1.send(10)
+   end
+
+   spawn do
+       sleep 0.5.seconds
+       ch2.send("hello")
+   end
+
+   # Blocks until one channel has data
+   select
+   when value = ch1.receive
+       puts "Received from ch1: #{value}"
+   when value = ch2.receive
+       puts "Received from ch2: #{value}"
+   end
+
+Select Patterns:
+  * ``when value = channel.receive`` - blocking receive
+
+  * ``when channel.send(value)`` - blocking send
+
+  * ``when timeout(5.seconds)`` - timeout
+
+  * ``else`` - non-blocking
+
+  .. code-block:: crystal
+
+     select
+     when foo = foo_channel.receive
+       puts foo
+     when bar = bar_channel.receive?
+       puts bar
+     when baz_channel.send
+       exit
+     when timeout(5.seconds)
+       puts "Timeout"
+      else
+        puts "No operations ready"
+     end
+
+Channel Best Practices:
+   Use buffered channels for producers/consumers with different rates:
+
+   .. code-block:: crystal
+
+      # Buffered channel with capacity of 10
+      channel = Channel(Int32).new(10)
+
+      spawn do
+        100.times do |i|
+          channel.send(i)  # Won't block unless buffer is full
+        end
+      end
+
+   Use closed channels for graceful shutdown:
+
+   .. code-block:: crystal
+
+      channel = Channel(String).new
+
+      spawn do
+        loop do
+          if message = channel.receive?
+            process_message(message)
+          else
+            break  # Channel closed, exit worker
+          end
+        end
+      end
+
+      # Close channel when done
+      channel.close
+
+Fiber Patterns:
+   Worker pool pattern for concurrent processing:
+
+   .. code-block:: crystal
+
+      def create_worker_pool(size : Int32, &block : Int32 -> _)
+        channel = Channel(Proc).new(size)
+
+        size.times do |i|
+          spawn do
+            loop do
+              if job = channel.receive?
+                block.call(i)
+              else
+                break
+              end
+            end
+          end
+        end
+
+        channel
+      end
+
+      # Usage
+      workers = create_worker_pool(4) do |worker_id|
+        puts "Worker #{worker_id} processing job"
+      end
+
+Advanced Concurrency Patterns:
+   Complex concurrent workflows and synchronization:
+
+   .. code-block:: crystal
+
+      # Fan-out/Fan-in pattern
+      def fan_out_fan_in(urls : Array(String)) : Array(String)
+        # Fan-out: spawn workers for each URL
+        results_channel = Channel(String).new
+
+        urls.each do |url|
+          spawn do
+            response = HTTP::Client.get(url)
+            results_channel.send(response.body)
+          end
+        end
+
+        # Fan-in: collect all results
+        results = Array(String).new(urls.size)
+        urls.size.times do
+          results << results_channel.receive
+        end
+
+        results
+      end
+
+      # Pipeline pattern
+      def process_pipeline(data : Array(Int32)) : Array(String)
+        # Stage 1: filter even numbers
+        stage1 = Channel(Int32).new
+        spawn do
+          data.each { |n| stage1.send(n) if n.even? }
+          stage1.close
+        end
+
+        # Stage 2: convert to strings
+        stage2 = Channel(String).new
+        spawn do
+          loop do
+            if num = stage1.receive?
+              stage2.send(num.to_s)
+            else
+              break
+            end
+          end
+          stage2.close
+        end
+
+        # Stage 3: collect results
+        results = Array(String).new
+        loop do
+          if str = stage2.receive?
+            results << str
+          else
+            break
+          end
+        end
+
+        results
+      end
+
+      # Timeout pattern
+      def with_timeout(timeout : Time::Span, &block)
+        result_channel = Channel(typeof(block.call)).new(1)
+        error_channel = Channel(Exception).new(1)
+
+        spawn do
+          begin
+            result = block.call
+            result_channel.send(result)
+          rescue ex
+            error_channel.send(ex)
+          end
+        end
+
+        select
+        when value = result_channel.receive
+          value
+        when error = error_channel.receive
+          raise error
+        when timeout(timeout)
+          raise Timeout::Error.new("Operation timed out")
+        end
+      end
+
+      # Resource pool pattern
+      class ResourcePool(T)
+        def initialize(@factory : -> T, @size : Int32)
+          @resources = Channel(T).new(@size)
+          @size.times { @resources.send(@factory.call) }
+        end
+
+        def acquire : T
+          @resources.receive
+        end
+
+        def release(resource : T)
+          @resources.send(resource)
+        end
+
+        def use(&block : T -> U) : U
+          resource = acquire
+          begin
+            block.call(resource)
+          ensure
+            release(resource)
+          end
+        end
+      end
+
+      # Usage
+      db_pool = ResourcePool(DB::Connection).new(
+        ->{ DB.connect("postgres://...") },
+        10
+      )
+
+      result = db_pool.use do |conn|
+        conn.query_one("SELECT COUNT(*) FROM users", as: Int32)
+      end
+

@@ -1,0 +1,273 @@
+Documentation Best Practices: API & Tools for AI Agents
+-------------------------------------------------------
+API Documentation:
+   REST API endpoint documentation:
+
+   .. code-block:: crystal
+
+      # User management API endpoints.
+      #
+      # This controller provides CRUD operations for user management
+      # with proper authentication and validation.
+      #
+      # ## Authentication
+      #
+      # All endpoints except `POST /users` require a valid JWT token
+      # in the `Authorization: Bearer <token>` header.
+      #
+      # ## Rate Limiting
+      #
+      # API is rate-limited to 100 requests per minute per IP address.
+      #
+      # ## Error Responses
+      #
+      # * `400 Bad Request` - Invalid input data
+      # * `401 Unauthorized` - Missing or invalid token
+      # * `403 Forbidden` - Insufficient permissions
+      # * `404 Not Found` - Resource not found
+      # * `429 Too Many Requests` - Rate limit exceeded
+      class UserController
+        # Creates a new user account.
+        #
+        # ## Endpoint
+        #
+        # `POST /api/v1/users`
+        #
+        # ## Request Body
+        #
+        # ```json
+        # {
+        #   "email": "user@example.com",
+        #   "password": "securepassword",
+        #   "name": "John Doe"
+        # }
+        # ```
+        #
+        # ## Response
+        #
+        # ### 201 Created
+        #
+        # ```json
+        # {
+        #   "id": 123,
+        #   "email": "user@example.com",
+        #   "name": "John Doe",
+        #   "created_at": "2024-01-15T10:30:00Z",
+        #   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        # }
+        # ```
+        #
+        # ### 400 Bad Request
+        #
+        # ```json
+        # {
+        #   "error": "Invalid email format"
+        # }
+        # ```
+        #
+        # ### 409 Conflict
+        #
+        # ```json
+        # {
+        #   "error": "Email already exists"
+        # }
+        # ```
+        def create(context : HTTP::Server::Context)
+          user_data = parse_user_data(context.request)
+          validation_errors = validate_user_data(user_data)
+
+          if validation_errors.any?
+            context.response.status_code = 400
+            context.response.print({error: validation_errors.join(", ")}.to_json)
+            return
+          end
+
+          begin
+            user = create_user(user_data)
+            token = generate_jwt_token(user)
+
+            context.response.status_code = 201
+            context.response.print({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              created_at: user.created_at,
+              token: token
+            }.to_json)
+          rescue ex : DuplicateUserError
+            context.response.status_code = 409
+            context.response.print({error: "Email already exists"}.to_json)
+          end
+        end
+      end
+
+Documeation Generation:
+   Autoted documentation tools:
+
+   .. code-block:: crystal
+
+      # Generate API documentation
+      #
+      # Run from project root:
+      # crystal docs
+
+      # Serve documentation locally
+      #
+      # crystal docs --serve
+      # Open http://localhost:3000
+
+      # Generate specific format
+      #
+      # crystal docs --format html
+      # crystal docs --format json
+
+      # Custom documentation configuration
+      #
+      # In shard.yml:
+      # documentation:
+      #   homepage: https://myapp.com/docs
+      #   source_code_uri: https://github.com/user/myapp/blob/{version}/src/%{path}#L%{line}
+      #   logo: assets/logo.png
+
+      # Include examples in documentation
+      #
+      # The following will be rendered as executable examples:
+      #
+      # ```
+      # # This is an example that users can run
+      # service = AuthService.new(db)
+      # token = service.register("user@example.com", "password")
+      # puts token
+      # ```
+
+README Documentation:
+   Comprehensive project documentation:
+
+   .. code-block:: markdown
+
+      # MyApp
+
+      A Crystal application for user management and authentication.
+
+      ## Features
+
+      * User registration and authentication
+      * JWT-based session management
+      * RESTful API with comprehensive documentation
+      * Rate limiting and security measures
+      * PostgreSQL database integration
+
+      ## Installation
+
+      ### Prerequisites
+
+      * Crystal 1.10.0 or higher
+      * PostgreSQL 12 or higher
+      * Node.js (for asset compilation, if applicable)
+
+      ### Setup
+
+      ```bash
+      # Clone the repository
+      git clone https://github.com/user/myapp.git
+      cd myapp
+
+      # Install dependencies
+      shards install
+
+      # Setup database
+      createdb myapp_development
+      psql myapp_development < schema.sql
+
+      # Configure environment
+      cp .env.example .env
+      # Edit .env with your settings
+
+      # Run the application
+      crystal run src/my_app.cr
+      ```
+
+      ## Usage
+
+      ### API Endpoints
+
+      #### Authentication
+      - `POST /api/v1/users` - Register new user
+      - `POST /api/v1/auth/login` - User login
+      - `POST /api/v1/auth/logout` - User logout
+
+      #### User Management
+      - `GET /api/v1/users/profile` - Get current user
+      - `PUT /api/v1/users/profile` - Update user profile
+      - `DELETE /api/v1/users/account` - Delete account
+
+      ### Configuration
+
+      See `config/` directory for configuration options:
+      - `database.cr` - Database settings
+      - `server.cr` - Server configuration
+      - `security.cr` - Security settings
+
+      ## Development
+
+      ### Running Tests
+
+      ```bash
+      # Run all tests
+      crystal spec
+
+      # Run with coverage
+      crystal spec --coverage
+
+      # Run specific test file
+      crystal spec spec/auth_spec.cr
+      ```
+
+      ### Code Quality
+
+      ```bash
+      # Format code
+      crystal tool format src/
+
+      # Run linter
+      ameba src/
+
+      # Generate documentation
+      crystal docs
+      ```
+
+      ## Deployment
+
+      ### Docker
+
+      ```bash
+      # Build image
+      docker build -t myapp .
+
+      # Run container
+      docker run -p 3000:3000 -e DATABASE_URL=... myapp
+      ```
+
+      ### Production Build
+
+      ```bash
+      # Build optimized binary
+      crystal build src/my_app.cr --release --static
+
+      # The binary will be available as `myapp`
+      ./myapp
+      ```
+
+      ## Contributing
+
+      1. Fork the repository
+      2. Create a feature branch
+      3. Make your changes
+      4. Add tests for new functionality
+      5. Run `crystal spec` and `ameba src/`
+      6. Submit a pull request
+
+      ## License
+
+      MIT License - see LICENSE file for details.
+
