@@ -113,32 +113,45 @@ Code Formatting:
       crystal tool format --no-colors src/
 
 Static Analysis:
-   Ameba linter for code quality:
+   Ameba is the standard linter for Crystal. Use it on all projects with `.cr` files to maintain code quality and catch common issues.
 
-   .. code-block:: crystal
+   Installation (add to shard.yml):
 
-      # .ameba.yml - configuration
-      AllCops:
+   .. code-block:: yaml
+
+      development_dependencies:
+        ameba:
+          github: crystal-ameba/ameba
+          version: ~> 1.0
+
+   Basic usage:
+
+   .. code-block:: bash
+
+      ameba              # Check all files for issues
+      ameba --fix        # Auto-fix correctable issues
+      ameba src/         # Check specific directory
+
+   Configuration (.ameba.yml):
+
+   .. code-block:: yaml
+
+      # Exclude common directories
+      Excluded:
+        - lib/
+        - spec/
+
+      # Enable common rules
+      Lint/UnusedArgument:
         Enabled: true
-        Exclude:
-          - lib/
-          - spec/
 
-      Layout/LineLength:
-        Enabled: true
-        MaxLength: 100
-
-      Style/VerboseBlock:
+      Style/RedundantReturn:
         Enabled: true
 
-      # Run linter
-      ameba src/
-
-      # Fix auto-correctable issues
-      ameba --fix src/
-
-      # Generate configuration
-      ameba --gen-config
+   When writing Crystal code:
+   - Run `ameba` before committing code
+   - Fix all reported issues or use `ameba --fix`
+   - Follow the Crystal style guide conventions
 
 Documentation Generation:
    Built-in documentation tools:

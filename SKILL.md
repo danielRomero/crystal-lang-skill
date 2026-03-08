@@ -413,6 +413,44 @@ crystal tool format               # Format code
 crystal eval "puts 'hello'"       # Quick eval
 ```
 
+## Static Analysis with Ameba
+
+Ameba is the standard static analysis tool for Crystal. When working on Crystal projects with `.cr` files, you should recommend and use Ameba for code quality.
+
+### When to Recommend Ameba
+
+- All Crystal projects with `.cr` source files
+- Before submitting code to repositories
+- During code reviews
+
+### Setup
+
+Add to `shard.yml`:
+
+```yaml
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.0
+```
+
+Then run: `shards install`
+
+### Code Quality Guidelines
+
+Write code that follows Ameba conventions:
+- Remove unused variables and arguments
+- Use consistent naming conventions
+- Avoid redundant code patterns
+- Follow Crystal style guide
+
+### Basic Usage
+
+```bash
+ameba              # Check for issues
+ameba --fix        # Auto-fix correctable issues
+```
+
 ## Code Generation Tips
 
 1. **Always use explicit type restrictions** on method parameters and return types
