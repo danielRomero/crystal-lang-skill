@@ -422,6 +422,7 @@ Ameba is the standard static analysis tool for Crystal. When working on Crystal 
 - All Crystal projects with `.cr` source files
 - Before submitting code to repositories
 - During code reviews
+- **After each iteration when implementing code** - this catches compilation errors and style issues early
 
 ### Setup
 
@@ -451,6 +452,15 @@ ameba              # Check for issues
 ameba --fix        # Auto-fix correctable issues
 ```
 
+### Development Workflow
+
+**Important**: Run ameba after each iteration when implementing code. This helps catch:
+- Unused variables and parameters
+- Unreachable code
+- Style violations
+- Potential bugs (unused expressions, redundant conditionals)
+- Compilation errors early in the development cycle
+
 ## Code Generation Tips
 
 1. **Always use explicit type restrictions** on method parameters and return types
@@ -461,6 +471,7 @@ ameba --fix        # Auto-fix correctable issues
 6. **Use blocks freely** - they compile to inlined code
 7. **Initialize all instance variables** in constructors to avoid Nil types
 8. **Validate parameters** with clear error messages
+9. **Run ameba after each iteration** - Catch compilation errors and style issues early before committing
 
 ## Common Pitfalls
 
