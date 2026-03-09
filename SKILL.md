@@ -469,9 +469,15 @@ ameba --fix        # Auto-fix correctable issues
 4. **Use `String?`** for optional values (not Nil directly)
 5. **Use `?` suffix methods** instead of raising for expected failures
 6. **Use blocks freely** - they compile to inlined code
-7. **Initialize all instance variables** in constructors to avoid Nil types
+7. **Initialize all instance variables** in constructors to avoid Nil types - prefer inline initialization (`@var : Type = value`)
 8. **Validate parameters** with clear error messages
 9. **Run ameba after each iteration** - Catch compilation errors and style issues early before committing
+10. **Don't use `previous_def` across multiple macro-generated methods** - collect data, generate one complete method
+11. **Handle union types explicitly** - use `T.union_types` macro introspection when needed
+12. **Don't impose artificial limits** - use array parameters directly (`args: values`) instead of case statements
+13. **Always close resources** - use `begin/ensure` blocks for ResultSets, files, connections
+14. **Never interpolate user input into SQL** - always use parameterized queries
+15. **Pass connection context through method chains** - essential for transaction isolation
 
 ## Common Pitfalls
 
@@ -481,6 +487,114 @@ ameba --fix        # Auto-fix correctable issues
 4. Use `is_a?` for type checking, not `typeof`
 5. Variables declared inside `begin` get `Nil` type in rescue/ensure
 6. Protected methods callable on same type instances or same namespace
+7. **Instance variables must be declared before methods that use them** - inline initialization is safest
+8. **Nilable types must be initialized with `nil`, not an instance** - use memoization for lazy init
+9. **Macros generate complete methods** - each call replaces previous, doesn't chain with `previous_def`
+10. **SQLite requires LIMIT with OFFSET** - unlike PostgreSQL/MySQL
+11. **`Class` cannot be used as generic type argument** - use `String` or other concrete types
+12. **Resource leaks from unclosed ResultSets** - always close after iteration
+13. **Wrong exception types in tests** - SQLite raises `SQLite3::Exception`, not `DB::Error`
+
+## Database and SQL Patterns
+
+When working with databases in Crystal:
+
+### Resource Management
+
+Always close ResultSets to prevent connection pool exhaustion:
+
+```crystal
+# BAD - Connection leak
+rs = conn.query(sql, args)
+rs.each { |row| process(row) }
+# rs never closed!
+
+# GOOD - Proper cleanup
+rs = conn.query(sql, args)
+begin
+  rs.each { |row| process(row) }
+ensure
+  rs.close  # CRITICAL!
+end
+
+# BETTER - Block form (auto-closes)
+conn.query(sql, args) do |rs|
+  rs.each { |row| process(row) }
+end
+```
+
+### SQL Parameterization
+
+Never interpolate user input into SQL:
+
+```crystal
+# BAD - SQL injection vulnerability
+sql = "SELECT * FROM users WHERE name = '#{user_input}'"
+
+# GOOD - Parameterized query
+sql = "SELECT * FROM users WHERE name = ?"
+conn.exec(sql, user_input)
+
+# Better - Whitelist operators
+VALID_OPERATORS = %w(= != > >= < <= LIKE IN)
+raise ArgumentError.new("Invalid operator") unless VALID_OPERATORS.includes?(operator)
+sql = "#{column} #{operator} ?"
+```
+
+### SQLite-Specific Quirks
+
+SQLite is stricter than PostgreSQL/MySQL:
+
+```crystal
+# ERROR - SQLite requires LIMIT with OFFSET
+sql = "SELECT * FROM users OFFSET 100"
+
+# CORRECT - Always include LIMIT
+sql = "SELECT * FROM users LIMIT -1 OFFSET 100"  # -1 = unlimited in SQLite
+```
+
+### Connection Context in Transactions
+
+Pass connection context through method calls:
+
+```crystal
+# BAD - Each call uses different connection, breaking transactions
+def find(id)
+  SqliteOrm.with_connection { |conn| query(conn, id) }
+end
+
+# GOOD - Accept optional connection parameter
+def find(id : Int64, conn : DB::Database? = nil)
+  SqliteOrm.with_connection(conn) { |c| query(c, id) }
+end
+
+# Usage in transaction
+SqliteOrm.transaction do |tx|
+  user = repo.find(1, tx)  # Uses transaction connection
+  repo.update(user, tx)     # Same connection
+end
+```
+
+### Array Parameters
+
+Don't limit parameter counts artificially:
+
+```crystal
+# BAD - Artificial limit
+case values.size
+when 0 then conn.exec(sql)
+when 1 then conn.exec(sql, values[0])
+# ... up to 10
+else raise "Too many parameters"
+end
+
+# GOOD - Crystal's DB library handles arrays of any size
+if values.empty?
+  conn.exec(sql)
+else
+  conn.exec(sql, args: values)  # Unlimited parameters!
+end
+```
 
 ## Reference Files
 

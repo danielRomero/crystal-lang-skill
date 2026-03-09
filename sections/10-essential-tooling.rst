@@ -287,10 +287,42 @@ Code Formatting:
       # Format with custom rules
       crystal tool format --no-colors src/
 
-Static Analysis:
-   Ameba is the standard linter for Crystal. Use it on all projects with `.cr` files to maintain code quality and catch common issues.
+Compiler Warnings and Deprecations:
+    Always check compiler warnings. Crystal warns about deprecated method usage.
 
-   Installation (add to shard.yml):
+    .. code-block:: crystal
+
+       # BAD - Deprecated syntax
+       sleep(0.1)  # Warning: Deprecated ::sleep. Use ::sleep(Time::Span) instead
+
+       # GOOD - Correct syntax
+       sleep(0.1.seconds)
+
+       # Other common deprecations
+       Time.new(year, month, day)  # Deprecated - use Time.local instead
+       File.exists?(path)          # Deprecated - use File.exists? (no 's') instead
+
+    Handling Deprecation Warnings:
+
+    .. code-block:: bash
+
+       # Show all warnings during compilation
+       crystal build app.cr --warnings=all
+
+       # Treat warnings as errors (strict mode)
+       crystal build app.cr --warnings=all --error-on-warnings
+
+    When you see deprecation warnings:
+
+    1. Read the warning message - it suggests the replacement
+    2. Update your code to use the new API
+    3. Check the Crystal changelog for migration notes
+    4. Update immediately - deprecated methods may be removed in future versions
+
+Static Analysis:
+    Ameba is the standard linter for Crystal. Use it on all projects with `.cr` files to maintain code quality and catch common issues.
+
+    Installation (add to shard.yml):
 
    .. code-block:: yaml
 

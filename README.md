@@ -13,6 +13,7 @@ Crystal Lang Skill is an opencode skill that equips AI agents with comprehensive
 - Concurrency (fibers, channels)
 - Metaprogramming (macros)
 - Code generation best practices
+- Database patterns and SQL safety
 
 ## Installation
 
