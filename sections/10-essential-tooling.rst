@@ -60,6 +60,181 @@ Testing Framework:
       # Run with coverage
       # crystal spec --coverage
 
+Understanding Test Output:
+   Crystal spec displays results with visual indicators and detailed failure information.
+
+   Test Status Indicators:
+      Each test is represented by a single character:
+
+      - ``.`` (green) - Test passed
+      - ``F`` (red) - Assertion failed (expected vs actual mismatch)
+      - ``E`` (red) - Runtime error/exception raised
+      - ``*`` (yellow) - Test skipped/pending
+
+   Example Output (Colored):
+      .. code-block:: text
+
+         ......F.E..
+
+         Failures:
+
+           1) Calculator #add adds two numbers correctly
+              Failure/Error: result.should eq(5)
+
+                Expected: 5
+                     got: 4
+
+              # spec/calculator_spec.cr:7
+
+           2) Calculator #divide handles division
+              Error: Division by zero (DivisionByZeroError)
+
+                spec/calculator_spec.cr:15:7 in 'divide'
+                spec/calculator_spec.cr:20:3 in '->'
+                ...
+
+              # spec/calculator_spec.cr:20
+
+         Finished in 2.34 milliseconds
+         11 examples, 1 failures, 1 errors
+
+   Non-Colored Output:
+      Use ``--no-color`` for CI logs or plain text:
+
+      .. code-block:: bash
+
+         crystal spec --no-color
+
+      Output without ANSI codes:
+
+      .. code-block:: text
+
+         ......F.E..
+
+         Failures:
+
+           1) Calculator #add adds two numbers correctly
+              Failure/Error: result.should eq(5)
+
+                Expected: 5
+                     got: 4
+
+              # spec/calculator_spec.cr:7
+
+Assertion Failures vs Runtime Errors:
+   Assertion Failures (F):
+      Occur when an expectation is not met. Crystal shows:
+
+      - Full test description
+      - The failing assertion line
+      - Expected value
+      - Actual (got) value
+      - File path and line number (prefixed with ``#``)
+
+      .. code-block:: text
+
+         Failure/Error: user.name.should eq("Alice")
+
+           Expected: "Alice"
+                got: "Bob"
+
+         # spec/models/user_spec.cr:15
+
+   Runtime Errors (E):
+      Occur when code raises an exception during test execution. Shows:
+
+      - Error type and message
+      - Full stack trace
+      - Test file and line where error occurred
+
+      .. code-block:: text
+
+         Error: Nil assertion failed (NilAssertionError)
+
+           spec/models/user_spec.cr:15:7 in 'not_nil!'
+           spec/models/user_spec.cr:22:3 in '->'
+           src/models/user.cr:45:5 in 'find'
+
+         # spec/models/user_spec.cr:22
+
+Locating Failed Tests:
+   Crystal always outputs the exact file and line at the end of each failure:
+
+   .. code-block:: text
+
+      # spec/models/user_spec.cr:15
+
+   This format makes it easy to:
+   - Jump directly to the failing test in your editor
+   - Run a specific test: ``crystal spec spec/models/user_spec.cr:15``
+   - Filter by line: ``crystal spec -l 15``
+
+Useful Options for Debugging:
+   .. code-block:: bash
+
+      # Verbose mode - show test names as they run
+      crystal spec -v
+
+      # Run only specific test by line number
+      crystal spec -l 15
+      crystal spec --location spec/user_spec.cr:15
+
+      # Run tests matching a pattern
+      crystal spec -e "should validate"
+
+      # Stop on first failure
+      crystal spec --fail-fast
+
+      # Show full compilation error trace
+      crystal spec --error-trace
+
+TAP Format for CI Integration:
+   TAP (Test Anything Protocol) provides machine-readable output:
+
+   .. code-block:: bash
+
+      crystal spec --tap
+
+   Example TAP output:
+
+   .. code-block:: text
+
+      TAP version 13
+      1..11
+      ok 1 - Calculator #add adds two numbers correctly
+      ok 2 - Calculator #add handles negative numbers
+      ...
+      not ok 8 - Calculator #add adds two numbers correctly
+        ---
+        message: 'Expected: 5, got: 4'
+        file: 'spec/calculator_spec.cr'
+        line: 7
+        ...
+      not ok 9 - Calculator #divide handles division
+        ---
+        message: 'Division by zero'
+        file: 'spec/calculator_spec.cr'
+        line: 20
+        ...
+
+   TAP format is ideal for:
+   - CI/CD pipelines (Jenkins, GitHub Actions, GitLab CI)
+   - Test result aggregation tools
+   - Automated test reporting systems
+
+Exit Codes:
+   Crystal spec returns specific exit codes:
+
+   - ``0`` - All tests passed
+   - ``1`` - One or more tests failed
+   - ``2`` - Compilation error (specs didn't compile)
+
+   Use in scripts:
+
+   .. code-block:: bash
+
+      crystal spec && echo "All tests passed" || echo "Tests failed"
+
 Dependency Management:
    Shards package manager:
 
